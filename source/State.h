@@ -24,6 +24,8 @@ namespace OT
 		virtual void deactivate();
 		
 		bool isActive() { return active; }
+
+		sf::Mutex stateMutex;
 		
 	private:
 		bool active;

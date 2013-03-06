@@ -173,41 +173,11 @@ void Application::init()
 
 void Application::loop()
 {
-	sf::Clock clock;
-	sf::String rateIndicator("<not available>", fonts["UbuntuMono-Regular.ttf"], 16);
-	double rateIndicatorTimer = 0;
-	double rateDamped = 0;
-	double rateDampFactor = 0;
-	double dt_max = 0, dt_min = 0;
-	int dt_maxmin_resetTimer = 0;
+	window.SetActive(false);
+	sf::Thread renderThread(&WindowRender::render, this);
+	renderThread.Launch();
 	
 	while (window.IsOpened() && exitCode == 0 && !states.empty()) {
-		double dt_real = clock.GetElapsedTime();
-		//dt_max = (dt_max + dt_real * dt_real * 0.5) / (1 + dt_real * 0.5);
-		//dt_min = (dt_min + dt_real * dt_real * 0.5) / (1 + dt_real * 0.5);
-		if (dt_real > dt_max) {
-			dt_max = dt_real;
-			dt_maxmin_resetTimer = 0;
-		}
-		if (dt_real < dt_min) {
-			dt_min = dt_real;
-			dt_maxmin_resetTimer = 0;
-		}
-		double dt = std::min<double>(dt_real, 0.1); //avoids FPS dropping below 10 Hz
-		clock.Reset();
-		
-		//Update the rate indicator.
-		rateDampFactor = (dt_real * 1);
-		rateDamped = (rateDamped + dt_real * rateDampFactor) / (1 + rateDampFactor);
-		if ((rateIndicatorTimer += dt_real) > 0.5) {
-			rateIndicatorTimer -= 0.5;
-			if (++dt_maxmin_resetTimer >= 2*3) {
-				dt_maxmin_resetTimer = 0;
-				dt_max = dt_real;
-				dt_min = dt_real;
-			}
-		}
-		
 		//Handle events.
 		sf::Event event;
 		while (window.GetEvent(event)) {
@@ -223,7 +193,10 @@ void Application::loop()
 				if (event.Key.Code == sf::Key::R && event.Key.Control) {
 					LOG(IMPORTANT, "reinitializing game");
 					Game * old = (Game *)states.top();
-					popState();
+					{
+						sf::Lock lock(old->stateMutex);
+						popState();
+					}
 					delete old;
 					Game * game = new Game(*this);
 					pushState(game);
@@ -239,10 +212,16 @@ void Application::loop()
 			}
 			rootGUI->handleEvent(event);
 			if (!states.empty()) {
-				if (states.top()->handleEvent(event))
+				states.top()->stateMutex.Lock();
+				if (states.top()->handleEvent(event)) {
+					states.top()->stateMutex.Unlock();
 					continue;
-				if (states.top()->gui.handleEvent(event))
+				}
+				if (states.top()->gui.handleEvent(event)) {
+					states.top()->stateMutex.Unlock();
 					continue;
+				}
+				states.top()->stateMutex.Unlock();
 			}
 			if (event.Type == sf::Event::Closed) {
 				LOG(WARNING, "current state did not handle sf::Event::Closed");
@@ -250,31 +229,6 @@ void Application::loop()
 				continue;
 			}
 		}
-		
-		//Make the current state do its work.
-		if (!states.empty()) {
-			states.top()->advance(dt);
-			states.top()->gui.draw();
-		}
-		rootGUI->draw();
-		
-		//Draw the debugging overlays.
-		char dbg[1024];
-		snprintf(dbg, 32, "%.0fHz [%.0f..%.0f]", 1.0/rateDamped, 1.0/dt_max, 1.0/dt_min);
-		if (!states.empty()) {
-			strcat(dbg, "\n");
-			strcat(dbg, states.top()->debugString);
-		}
-		rateIndicator.SetText(dbg);
-		
-		window.SetView(window.GetDefaultView());
-		sf::FloatRect r = rateIndicator.GetRect();
-		sf::Shape bg = sf::Shape::Rectangle(r.Left, r.Top, r.Right, r.Bottom, sf::Color(0, 0, 0, 0.25*255));
-		window.Draw(bg);
-		window.Draw(rateIndicator);
-		
-		//Swap buffers.
-		window.Display();
 	}
 }
 
@@ -311,3 +265,76 @@ void Application::popState()
 		states.top()->activate();
 	}
 }
+
+void WindowRender::render(void * userData) {
+	Application * app = (Application *) userData;
+	app->window.SetActive(true);
+
+	sf::Clock clock;
+	sf::String rateIndicator("<not available>", app->fonts["UbuntuMono-Regular.ttf"], 16);
+	double rateIndicatorTimer = 0;
+	double rateDamped = 0;
+	double rateDampFactor = 0;
+	double dt_max = 0, dt_min = 0;
+	int dt_maxmin_resetTimer = 0;
+
+	while(app->window.IsOpened() && app->exitCode == 0 && !app->states.empty()) {
+		double dt_real = clock.GetElapsedTime();
+		//dt_max = (dt_max + dt_real * dt_real * 0.5) / (1 + dt_real * 0.5);
+		//dt_min = (dt_min + dt_real * dt_real * 0.5) / (1 + dt_real * 0.5);
+		if (dt_real > dt_max) {
+			dt_max = dt_real;
+			dt_maxmin_resetTimer = 0;
+		}
+		if (dt_real < dt_min) {
+			dt_min = dt_real;
+			dt_maxmin_resetTimer = 0;
+		}
+		double dt = std::min<double>(dt_real, 0.1); //avoids FPS dropping below 10 Hz
+		clock.Reset();
+
+		//Update the rate indicator.
+		rateDampFactor = (dt_real * 1);
+		rateDamped = (rateDamped + dt_real * rateDampFactor) / (1 + rateDampFactor);
+		if ((rateIndicatorTimer += dt_real) > 0.5) {
+			rateIndicatorTimer -= 0.5;
+			if (++dt_maxmin_resetTimer >= 2*3) {
+				dt_maxmin_resetTimer = 0;
+				dt_max = dt_real;
+				dt_min = dt_real;
+			}
+		}
+
+		//Make the current state do its work.
+		{
+			if (!app->states.empty()) {
+				sf::Lock lock(app->states.top()->stateMutex);
+				app->states.top()->advance(dt);
+				app->states.top()->gui.draw();
+			}
+		}
+		app->rootGUI->draw();
+
+		//Draw the debugging overlays.
+		char dbg[1024];
+		snprintf(dbg, 32, "%.0fHz [%.0f..%.0f]", 1.0/rateDamped, 1.0/dt_max, 1.0/dt_min);
+		{
+			sf::Lock lock(app->states.top()->stateMutex);
+			if (!app->states.empty()) {
+				strcat(dbg, "\n");
+				strcat(dbg, app->states.top()->debugString);
+			}
+		}
+		rateIndicator.SetText(dbg);
+
+		app->window.SetView(app->window.GetDefaultView());
+		sf::FloatRect r = rateIndicator.GetRect();
+		sf::Shape bg = sf::Shape::Rectangle(r.Left, r.Top, r.Right, r.Bottom, sf::Color(0, 0, 0, 0.25*255));
+		app->window.Draw(bg);
+		app->window.Draw(rateIndicator);
+
+		//Swap buffers.
+		app->window.Display();
+	}
+}
+

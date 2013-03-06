@@ -30,6 +30,7 @@ namespace OT
 	class Application
 	{
 		friend class State;
+		friend class WindowRender;
 		
 	public:
 		Application(int argc, char * argv[]);
@@ -68,6 +69,11 @@ namespace OT
 		bool dumpResources;
 		Path dumpResourcesPath;
 	};
-	
+
+	class WindowRender {
+	public:
+		static void render(void * userData);
+	};
+
 	extern Application * App;
 }

@@ -6,6 +6,7 @@
 #ifdef _WIN32
 #include "Math/Round.h"
 #endif
+#include "Math/Rand.h"
 
 using namespace OT;
 
@@ -986,9 +987,17 @@ void Game::playRandomBackgroundSound()
  *  their calculated routes here, so they may find new ways of accessing things. */
 void Game::updateRoutes()
 {
+	sf::Clock clock;
+
 	LOG(DEBUG, "updating routes");
 	visualizeRoute.clear();
 	for (ItemSet::iterator i = items.begin(); i != items.end(); i++) {
+		if (clock.GetElapsedTime() > 1.0/50) {
+			stateMutex.Unlock();
+			sf::Sleep(Math::randd(1.0/15, 1.0/20));
+			stateMutex.Lock();
+			clock.Reset();
+		}
 		(*i)->updateRoutes();
 	}
 }
