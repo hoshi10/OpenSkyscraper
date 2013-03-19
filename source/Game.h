@@ -19,6 +19,9 @@
 #include "ToolboxWindow.h"
 #include "Decorations.h"
 
+//#include "People/Person.h"
+#include "People/Visitor.h"
+
 namespace OT {
 	namespace Item { class AbstractPrototype; }
 	
@@ -105,6 +108,13 @@ namespace OT {
 		GameMap gameMap;
 		PathFinder pathFinder;
 		Decorations decorations;
+
+		/*typedef std::set<Person *> PeopleSet;
+		PeopleSet pendingRouteUpdate;*/
+		std::priority_queue<Visitor *, std::deque<Visitor *>, Visitor::laterThan> arrivingVisitors;
+		//bool transportChanged;
+		bool buildingChanged;
+		Route findRoute(Item::Item * start, int fromFloor, Item::Item * destination, Person::Journey journey, bool serviceRoute = false);
 		
 	private:
 		double zoom;

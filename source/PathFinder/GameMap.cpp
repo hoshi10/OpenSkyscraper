@@ -209,7 +209,7 @@ MapNode* GameMap::findNode(const MapNode::Point &p, Item::Item *item) {
 
 	if(item->isElevator() && (!n->hasElevator || (n->transportItems[MapNode::UP] != item && n->transportItems[MapNode::DOWN] != item)))
 		return NULL;
-	else if(item->isStairlike() && n->transportItems[MapNode::UP] != item)
+	else if(item->isStairlike() && (n->transportItems[MapNode::UP] != item && n->transportItems[MapNode::DOWN] != item))
 		return NULL;
 	else
 		return n;

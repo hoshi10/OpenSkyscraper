@@ -1,6 +1,7 @@
 #include "../Game.h"
 #include "../Math/Rand.h"
 #include "FastFood.h"
+#include "../People/Visitor.h"
 
 using namespace OT;
 using namespace OT::Item;
@@ -15,6 +16,7 @@ void FastFood::init()
 {
 	Item::init();
 	
+	visitDuration = 20.0;
 	variant = rand() % 5;
 	open = false;
 	
@@ -61,10 +63,14 @@ void FastFood::advance(double dt)
 		int today = 10;
 		clearCustomers();
 		for (int i = 0; i < today; i++) {
-			Customer * c = new Customer(this);
+			/*Customer * c = new Customer(this);
 			c->arrivalTime = (game->time.year - 1) * 12 + (game->time.quarter - 1) * 3 + game->time.day + Math::randd(Time::hourToAbsolute(10), Time::hourToAbsolute(20));
 			customers.insert(c);
-			arrivingCustomers.push(c);
+			arrivingCustomers.push(c);*/
+			Visitor * v = new Visitor(this);
+			v->arrivalTime = (game->time.year - 1) * 12 + (game->time.quarter - 1) * 3 + game->time.day + Math::randd(Time::hourToAbsolute(10), Time::hourToAbsolute(20));
+			customers.insert(v);
+			game->arrivingVisitors.push(v);
 		}
 	}
 	
@@ -79,18 +85,23 @@ void FastFood::advance(double dt)
 	}
 	
 	//Make customers arrive.
-	while (!arrivingCustomers.empty()) {
+	/*for (Customers::iterator c = customers.begin(); c != customers.end();) {
+		(*c)->advance(dt);
+		if((*c)->at != NULL) customers.erase(c++);
+		else ++c;
+	}*/
+	/*while (!arrivingCustomers.empty()) {
 		Customer * c = arrivingCustomers.top();
 		if (game->time.absolute > c->arrivalTime && !lobbyRoute.empty()) {
 			arrivingCustomers.pop();
 			c->journey.set(lobbyRoute);
 		} else break;
-	}
+	}*/
 	
 	//Make customers leave once they're done.
 	for (std::list<Person *>::iterator ip = eatingCustomers.begin(); ip != eatingCustomers.end();) {
 		Person * p = *ip;
-		CustomerMetadata &m = customerMetadata[p];
+		/*CustomerMetadata &m = customerMetadata[p];
 		if (game->time.absolute >= m.arrivalTime + 20 * Time::kBaseSpeed || !open) {
 			const Route &r = game->findRoute(this, game->mainLobby); // Customers may leave for different destinations besides main lobby, so this is not precomputed
 			if (r.empty()) {
@@ -102,6 +113,11 @@ void FastFood::advance(double dt)
 				removePerson(p);
 				p->journey.set(r);
 			}
+		} else break;*/
+		p->advance(dt);
+		if (p->at != this) {
+			// Customer has left
+			ip = eatingCustomers.erase(ip);
 		} else break;
 	}
 	
@@ -115,31 +131,38 @@ void FastFood::addPerson(Person * p)
 	m.arrivalTime = game->time.absolute;
 	eatingCustomers.push_back(p);
 	spriteNeedsUpdate = true;
+
+	((Visitor *)p)->destArrivalTime = m.arrivalTime;
+	//((Visitor *)p)->state = Visitor::VISITING;
 }
 
 void FastFood::removePerson(Person * p)
 {
 	Item::removePerson(p);
 	spriteNeedsUpdate = true;
+
+	((Visitor *)p)->destArrivalTime = 0;
+	//((Visitor *)p)->state = Visitor::TRAVELING;
 }
 
 void FastFood::clearCustomers()
 {
 	for (Customers::iterator c = customers.begin(); c != customers.end(); c++)
 		delete *c;
-	while (!arrivingCustomers.empty()) arrivingCustomers.pop();
+	//while (!arrivingCustomers.empty()) arrivingCustomers.pop();
 	eatingCustomers.clear();
 	customers.clear();
 	customerMetadata.clear();
 }
 
+/*
 FastFood::Customer::Customer(FastFood * item)
 :	Person(item->game)
 {
 	arrivalTime = 0;
 	Type types[] = {kMan, kWoman1, kWoman2, kWomanWithChild1};
 	type = types[rand() % 4];
-}
+}*/
 
 Path FastFood::getRandomBackgroundSoundPath()
 {

@@ -98,3 +98,13 @@ void Lobby::Render(sf::RenderTarget & target) const
 	target.Draw(o);
 	game->drawnSprites++;
 }
+
+void Lobby::advance(double dt) {
+	if (game->mainLobby == this) {
+		for (People::iterator ip = people.begin(); ip != people.end();) {
+			Person * p = *ip;
+			++ip;
+			p->advance(dt);
+		}
+	}
+}

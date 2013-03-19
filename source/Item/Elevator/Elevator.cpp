@@ -234,11 +234,20 @@ void Elevator::addPerson(Person * p)
 
 void Elevator::removePerson(Person * p)
 {
-	for (Queues::iterator iq = queues.begin(); iq != queues.end(); iq++) {
-		(*iq)->removePerson(p);
+	int q_size;
+	for (Queues::iterator iq = queues.begin(); iq != queues.end(); ++iq) {
+		Queue * q = *iq;
+		q_size = q->people.size();
+		q->removePerson(p);
+		if (q->people.size() < q_size) break;
 	}
-	for (Cars::iterator ic = cars.begin(); ic != cars.end(); ic++) {
-		(*ic)->removePassenger(p);
+	for (Cars::iterator ic = cars.begin(); ic != cars.end(); ++ic) {
+		Car * c = *ic;
+		if (c->passengers.count(p) != 0) {
+			c->removePassenger(p);
+			c->updateSprite();
+			break;
+		}
 	}
 	Item::removePerson(p);
 }
@@ -263,11 +272,12 @@ Queue * Elevator::getQueue(int floor, Direction dir)
 /// after the elevator motors are repositioned or certain floors deactivated.
 void Elevator::cleanQueues()
 {
-	for (Queues::iterator iq = queues.begin(); iq != queues.end(); iq++) {
+	for (Queues::iterator iq = queues.begin(); iq != queues.end();) {
 		if (!connectsFloor((*iq)->floor)) {
-			for (int i = 0; i < 2; i++) delete *iq;
-			queues.erase(iq);
-		}
+			Queue * q = *iq++;
+			/*for (int i = 0; i < 2; i++) */delete q;
+			queues.erase(q);
+		} else ++iq;
 	}
 }
 

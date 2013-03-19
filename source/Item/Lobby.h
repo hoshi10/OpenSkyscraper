@@ -28,6 +28,8 @@ namespace OT {
 			void updateSprite();
 			
 			void Render(sf::RenderTarget & target) const;
+			
+			virtual void advance(double dt);
 		};
 	}
 }

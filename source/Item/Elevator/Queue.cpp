@@ -1,7 +1,7 @@
 #include <cassert>
 #include "../../Application.h"
 #include "../../Game.h"
-#include "../../Person.h"
+#include "../../People/Person.h"
 #include "../../Sprite.h"
 #include "Elevator.h"
 #include "Queue.h"
@@ -27,7 +27,11 @@ Queue::~Queue()
 {
 	for (People::iterator ip = people.begin(); ip != people.end();) {
 		LOG(DEBUG, "forcing passenger %p ahead", (*ip));
-		(*(ip++))->journey.next();
+// 		(*(ip++))->advance(0);
+// 		(*(ip++))->journey.next();
+		Person * p = *ip++;
+		elevator->removePerson(p);
+		game->floorItems[floor]->addPerson(p);
 	}
 }
 
@@ -72,7 +76,8 @@ void Queue::advance(double dt)
 	for (People::iterator ip = people.begin(); ip != people.end();) {
 		Person * p = *(ip++);
 		p->stress += 1.0 / kSecondsUntilStressed / Time::kBaseSpeed * dta;
-		if (p->stress >= 1.0) p->journey.next();
+		p->advance(dt);
+		//if (p->stress >= 1.0) p->journey.next();
 	}
 }
 

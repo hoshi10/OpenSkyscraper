@@ -6,7 +6,7 @@
 
 #include "../GameObject.h"
 #include "../Math/Rect.h"
-#include "../Person.h"
+#include "../People/Person.h"
 #include "../Route.h"
 #include "../Sprite.h"
 #include "../Path.h"
@@ -20,7 +20,7 @@ namespace OT {
 		public:
 			int layer;
 			AbstractPrototype * const prototype;
-			Item(Game * game, AbstractPrototype * prototype) : GameObject(game), sf::Drawable(), prototype(prototype), size(prototype->size) { layer = 0; population = 0; }
+			Item(Game * game, AbstractPrototype * prototype) : GameObject(game), sf::Drawable(), prototype(prototype), size(prototype->size), visitDuration(0) { layer = 0; population = 0; }
 			virtual ~Item();
 			virtual void init() {}
 			
@@ -67,6 +67,9 @@ namespace OT {
 			virtual bool isElevator()  const { return false; }
 
 			virtual Path getRandomBackgroundSoundPath() { return ""; }
+
+			double visitDuration;
+			virtual bool isOpen() const { return true; }
 		};
 	}
 }

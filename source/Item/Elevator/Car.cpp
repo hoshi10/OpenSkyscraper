@@ -115,6 +115,11 @@ void Car::setState(State s)
 
 void Car::advance(double dt)
 {
+	for(Item::People::iterator ip = passengers.begin(); ip != passengers.end();) {
+		Person * p = *(ip++);
+		p->advance(dt);
+	}
+
 	int passengersBefore = passengers.size();
 	
 	//Advance the journey time.
@@ -262,8 +267,9 @@ void Car::advance(double dt)
 				if (!handled && nextPassengerToUnmount()) {
 					while (journeyTime >= kUnmountPeriod && (p = nextPassengerToUnmount())) {
 						journeyTime -= kUnmountPeriod;
-						passengers.erase(p);
-						p->journey.next();
+						//passengers.erase(p);
+						//p->journey.next();
+						p->advanceRoute();
 					}
 					handled = true;
 				}

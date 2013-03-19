@@ -11,7 +11,7 @@ PathFinder::PathFinder() {}
 
 PathFinder::~PathFinder() { clear(); }
 
-Route PathFinder::findRoute(const MapNode *start_mapnode, const MapNode *end_mapnode, Item::Item *start_item, Item::Item *end_item, bool serviceRoute) {
+Route PathFinder::findRoute(const MapNode *start_mapnode, const MapNode *end_mapnode, Item::Item *start_item, Item::Item *end_item, bool serviceRoute, Person::Journey journey) {
 	MapNode::Point start_point(start_item->position.x + start_item->size.x/2, start_mapnode->position.y);
 	MapNode::Point end_point(end_item->position.x + end_item->size.x/2, end_mapnode->position.y);
 
@@ -20,6 +20,9 @@ Route PathFinder::findRoute(const MapNode *start_mapnode, const MapNode *end_map
 	nodeStart.start_point = start_point;
 	nodeStart.end_point = end_point;
 	nodeStart.serviceRoute = serviceRoute;
+	nodeStart.numStairs = journey.numStairs;
+	nodeStart.numEscalators = journey.numEscalators;
+	nodeStart.numElevators = journey.numElevators;
 	MapSearchNode nodeEnd(end_mapnode);
 	astarsearch.SetStartAndGoalStates(nodeStart, nodeEnd);
 
@@ -65,14 +68,14 @@ void PathFinder::buildRoute(Route &r, Item::Item *start_item, Item::Item *end_it
 	MapSearchNode *n = start_node;
 	MapSearchNode *n_child;
 	r.add(start_item, n->mapNode->position.y);
-	n = astarsearch.GetSolutionNext();
+	if(!start_item->canHaulPeople()) n = astarsearch.GetSolutionNext();
 	while(n != end_node) {
 		n_child = astarsearch.GetSolutionNext();
 		Item::Item *i = n_child->parent_item;
 		if(i) {
 			int toFloor;
 			if(i->canHaulPeople()) toFloor = n_child->mapNode->position.y;
-			else				   toFloor = n->mapNode->position.y;
+			//else				   toFloor = n->mapNode->position.y;
 
 			Route::Node &rn_prev = r.nodes.back();
 			if(i->isElevator() && rn_prev.item->isElevator() && i == rn_prev.item) {

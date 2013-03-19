@@ -25,21 +25,21 @@ namespace OT {
 			int variant;
 			bool open;
 			
-			class Customer : public Person {
-			public:
-				Customer(FastFood * item);
-				virtual ~Customer()	{ LOG(DEBUG, "fastfood customer %p killed", this); }
-				double arrivalTime; //when the customer arrives at the lobby of the tower
-
-				struct laterThan : public std::binary_function<Customer *, Customer *, bool> {
-					bool operator() (const Customer * _Left, const Customer * _Right) const {
-						return (_Left->arrivalTime > _Right->arrivalTime);
-					}
-				};
-			};
-			std::priority_queue<Customer *, std::deque<Customer *>, Customer::laterThan> arrivingCustomers; // Priority queue to facilitate selection of customers spawned by FastFood due to arrive at tower
+// 			class Customer : public Person {
+// 			public:
+// 				Customer(FastFood * item);
+// 				virtual ~Customer()	{ LOG(DEBUG, "fastfood customer %p killed", this); }
+// 				double arrivalTime; //when the customer arrives at the lobby of the tower
+// 
+// 				struct laterThan : public std::binary_function<Customer *, Customer *, bool> {
+// 					bool operator() (const Customer * _Left, const Customer * _Right) const {
+// 						return (_Left->arrivalTime > _Right->arrivalTime);
+// 					}
+// 				};
+// 			};
+// 			std::priority_queue<Customer *, std::deque<Customer *>, Customer::laterThan> arrivingCustomers; // Priority queue to facilitate selection of customers spawned by FastFood due to arrive at tower
 			std::list<Person *> eatingCustomers; // List (in order of arrival) to facilitate selection of customers due to leave FastFood
-			typedef std::set<Customer *> Customers;
+			typedef std::set<Person *> Customers;
 			Customers customers;
 			void clearCustomers();
 			
@@ -59,6 +59,7 @@ namespace OT {
 			virtual void removePerson(Person * p);
 
 			Path getRandomBackgroundSoundPath();
+			bool isOpen() const { return open; }
 		};
 	}
 }

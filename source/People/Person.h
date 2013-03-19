@@ -1,8 +1,8 @@
 #pragma once
 #include <cstddef>
 #include <queue>
-#include "GameObject.h"
-#include "Route.h"
+#include "../GameObject.h"
+#include "../Route.h"
 
 namespace OT {
 	namespace Item { class Item; }
@@ -27,6 +27,10 @@ namespace OT {
 			Item::Item * item;
 			int toFloor;
 			
+			int numStairs;
+			int numEscalators;
+			int numElevators;
+
 		private:
 			Person * const person;
 			std::queue<Route::Node> nodes;
@@ -47,5 +51,9 @@ namespace OT {
 		Type type;
 		double stress;
 		int getWidth();
+
+		virtual void advance(double dt) {};
+		virtual void advanceRoute() { journey.next(); };
+		virtual void updateRoute() {};
 	};
 }

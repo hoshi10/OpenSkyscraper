@@ -28,7 +28,11 @@ void Stairlike::advance(double dt)
 	
 	for (People::iterator ip = people.begin(); ip != people.end();) {
 		Person * p = *(ip++);
-		if ((transitionTimes[p] += dta) >= kTransitionTime) p->journey.next();
+		p->advance(dt);
+		if ((transitionTimes[p] += dta) >= kTransitionTime) {
+			//p->journey.next();
+			p->advanceRoute();
+		}
 	}
 	
 	if (!people.empty()) {

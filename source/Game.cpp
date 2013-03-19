@@ -91,6 +91,12 @@ void Game::deactivate()
 
 bool Game::handleEvent(sf::Event & event)
 {
+	/*for (PeopleSet::const_iterator ip = pendingRouteUpdate.begin(); ip != pendingRouteUpdate.end();) {
+		Person * p = *ip++;
+		p->updateRoute();
+		pendingRouteUpdate.erase(p);
+	}*/
+
 	switch (event.Type) {
 		case sf::Event::KeyPressed: {
 			switch (event.Key.Code) {
@@ -373,6 +379,7 @@ bool Game::handleEvent(sf::Event & event)
 							if (item->canHaulPeople()) {
 								if (item->isElevator()) selectTool("finger");
 								updateRoutes();
+								//transportChanged = true;
 							} else
 								item->updateRoutes();
 							playOnce("simtower/construction/normal");
@@ -395,7 +402,10 @@ bool Game::handleEvent(sf::Event & event)
 					bool canHaulPeople = false;
 					if (itemBelowCursor->canHaulPeople()) canHaulPeople = true;
 					removeItem(itemBelowCursor);
-					if (canHaulPeople) updateRoutes();
+					if (canHaulPeople) {
+						updateRoutes();
+						//transportChanged = true;
+					} else buildingChanged = true;
 					playOnce("simtower/bulldozer");
 				}
 				else if (selectedTool == "finger") {
@@ -427,6 +437,7 @@ bool Game::handleEvent(sf::Event & event)
 							}
 							e->cleanQueues();
 							updateRoutes();
+							//transportChanged = true;
 						}
 					}
 				}
@@ -483,6 +494,13 @@ void Game::advance(double dt)
 	
 	timeWindow.advance(dt);
 	sky.advance(dt);
+
+	while (!arrivingVisitors.empty()) {
+		Visitor * v = arrivingVisitors.top();
+		v->advance(dt);
+		if (v->at == mainLobby) arrivingVisitors.pop();
+		else break;
+	}
 	
 	for (ItemSet::iterator i = items.begin(); i != items.end(); i++) {
 		(*i)->advance(dt);
@@ -636,6 +654,9 @@ void Game::advance(double dt)
 	
 	//Draw the debug string.
 	snprintf(debugString, 512, "%i sprites", drawnSprites);
+
+	//transportChanged = false;
+	buildingChanged = false;
 }
 
 void Game::reloadGUI()
@@ -989,7 +1010,14 @@ void Game::updateRoutes()
 	LOG(DEBUG, "updating routes");
 	visualizeRoute.clear();
 	for (ItemSet::iterator i = items.begin(); i != items.end(); i++) {
-		(*i)->updateRoutes();
+		Item::Item * item = (*i);
+		item->updateRoutes();
+		if (item->canHaulPeople()) {
+			for (Item::Item::People::iterator ip = item->people.begin(); ip != item->people.end();) {
+				Person * p = *ip++;
+				p->updateRoute();
+			}
+		}
 	}
 }
 
@@ -1010,4 +1038,20 @@ Route Game::findRoute(Item::Item * start, Item::Item * destination, bool service
 	MapNode *start_mapnode = gameMap.findNode(start_point, start);
 	MapNode *destination_mapnode = gameMap.findNode(end_point, destination);
 	return pathFinder.findRoute(start_mapnode, destination_mapnode, start, destination, serviceRoute);
+}
+
+Route Game::findRoute(Item::Item * start, int fromFloor, Item::Item * destination, Person::Journey journey, bool serviceRoute)
+{
+	MapNode::Point start_point(start->position.x + start->size.x/2, fromFloor);
+	MapNode::Point end_point(destination->position.x + destination->size.x/2, destination->position.y + destination->prototype->entrance_offset);
+
+	// For the special case of Metro, passengers can enter/exit from the middle floor if their destination is on that floor
+	/*if (start->prototype->icon == 19 && (end_point.y == start_point.y - 1))
+		start_point.y = end_point.y;
+	else */if (destination->prototype->icon == 19 && (start_point.y == end_point.y - 1))
+		end_point.y = start_point.y;
+
+	MapNode *start_mapnode = gameMap.findNode(start_point, start);
+	MapNode *destination_mapnode = gameMap.findNode(end_point, destination);
+	return pathFinder.findRoute(start_mapnode, destination_mapnode, start, destination, serviceRoute, journey);
 }
